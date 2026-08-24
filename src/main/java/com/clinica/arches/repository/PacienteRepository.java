@@ -8,13 +8,16 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+
 public interface PacienteRepository extends JpaRepository<Paciente, Integer> {
+
     List<Paciente> findByEstadoExpediente(String estado);
     List<Paciente> findByNombreCompletoContainingIgnoreCase(String nombre);
 
     // Llama directamente al procedimiento almacenado sp_archivar_paciente
+
     @Modifying
     @Transactional
-    @Query(value = "CALL sp_archivar_paciente(:id)", nativeQuery = true)
+    @Query(value = "CALL clinica.sp_archivar_paciente(CAST(:id AS integer))", nativeQuery = true)
     void archivarPaciente(@Param("id") Integer id);
 }

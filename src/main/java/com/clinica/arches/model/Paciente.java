@@ -7,7 +7,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "pacientes")
+@Table(name = "pacientes", schema = "clinica")
 @Data
 public class Paciente {
 
@@ -15,10 +15,12 @@ public class Paciente {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer idPaciente;
 
+    @Column(name = "nombre_completo", nullable = false)
     private String nombreCompleto;
 
     private String cedula;
 
+    @Column(name = "fecha_nacimiento", nullable = false)
     private LocalDate fechaNacimiento;
 
     private String sexo;
@@ -27,8 +29,9 @@ public class Paciente {
     private String telefono;
     private String correo;
 
+    @Column(name = "estado_expediente")
     private String estadoExpediente;
 
+    @Column(name = "fecha_registro")
     private LocalDateTime fechaRegistro;
 }
-

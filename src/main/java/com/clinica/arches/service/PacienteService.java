@@ -10,6 +10,7 @@ import com.clinica.arches.repository.PacienteRepository;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.Period;
 import java.util.List;
@@ -45,6 +46,7 @@ public class PacienteService {
     }
 
     public PacienteDTO crear(Paciente paciente) {
+        paciente.setIdPaciente(null); //fuerza persist() para que se autogeneren los ids y no los envie el cliente
         paciente.setEstadoExpediente("activo");
         paciente.setFechaRegistro(LocalDateTime.now());
         return convertirBasico(pacienteRepository.save(paciente));
@@ -65,7 +67,7 @@ public class PacienteService {
     private PacienteDTO convertirBasico(Paciente p) {
         PacienteDTO dto = new PacienteDTO();
         BeanUtils.copyProperties(p, dto);
-        dto.setEdad(Period.between(p.getFechaNacimiento(), java.time.LocalDate.now()).getYears());
+        dto.setEdad(Period.between(p.getFechaNacimiento(), LocalDate.now()).getYears());
         return dto;
     }
 
