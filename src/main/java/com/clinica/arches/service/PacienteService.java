@@ -8,6 +8,10 @@ import com.clinica.arches.repository.AntecedentePacienteRepository;
 import com.clinica.arches.repository.ContactoEmergenciaRepository;
 import com.clinica.arches.repository.PacienteRepository;
 import org.springframework.beans.BeanUtils;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -31,14 +35,33 @@ public class PacienteService {
         this.antecedenteRepository = antecedenteRepository;
     }
 
-    // Listado liviano: sin contactos ni antecedentes, para no sobrecargar la tabla
+    // Listado liviano sin filtros (se deja por compatibilidad; el listado de la UI usa listarConFiltros)
     public List<PacienteDTO> listarTodos() {
         return pacienteRepository.findAll().stream()
                 .map(this::convertirBasico)
                 .collect(Collectors.toList());
     }
 
-    // Detalle completo: incluye contactos y antecedentes
+    /**
+     * Sustenta: barra de búsqueda (nombre o cédula), filtro de estado (activo/inactivo)
+     * y la tabla paginada del listado de pacientes.
+     */
+    public Page<PacienteDTO> listarConFiltros(String search, String estado, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "nombreCompleto"));
+        String searchNormalizado = (search == null || search.isBlank()) ? null : search.trim();
+        String estadoNormalizado = (estado == null || estado.isBlank()) ? null : estado.trim();
+        return pacienteRepository.buscarConFiltros(searchNormalizado, estadoNormalizado, pageable)
+                .map(this::convertirBasico);
+    }
+
+    // Usado por los endpoints de exportación: misma lógica de filtro, pero sin paginar
+    public List<Paciente> listarEntidadesConFiltros(String search, String estado) {
+        String searchNormalizado = (search == null || search.isBlank()) ? null : search.trim();
+        String estadoNormalizado = (estado == null || estado.isBlank()) ? null : estado.trim();
+        return pacienteRepository.buscarConFiltrosSinPaginar(searchNormalizado, estadoNormalizado);
+    }
+
+    // Detalle completo: incluye contactos y antecedentes. Sustenta el botón "Ver" y la ficha PDF.
     public PacienteDTO buscarPorId(Integer id) {
         Paciente paciente = pacienteRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Paciente no encontrado: " + id));
@@ -91,3 +114,4 @@ public class PacienteService {
         return dto;
     }
 }
+
