@@ -17,7 +17,7 @@ public class AntecedentePaciente {
     private Integer idPaciente;
 
     @Column(name = "tipo_antecedente", nullable = false)
-    private String tipoAntecedente; // ej: "Familiar", "Personal", "Alérgico", "Quirúrgico"
+    private String tipoAntecedente; // "Familiar", "Personal", "Alérgico", "Quirúrgico"
 
     @Column(nullable = false)
     private String descripcion;

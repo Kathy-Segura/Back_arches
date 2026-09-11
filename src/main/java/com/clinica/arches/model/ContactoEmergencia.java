@@ -22,4 +22,5 @@ public class ContactoEmergencia {
     private String telefono;
 
     private String parentesco;
+
 }
