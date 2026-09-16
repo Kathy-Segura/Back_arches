@@ -1,9 +1,12 @@
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/db_sistema_arches
-    username: admin
-    password: admin5432
+    url: ${DB_URL}
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
+    hikari:
+      data-source-properties:
+        prepareThreshold: 0   # necesario si usas el endpoint -pooler de Neon (PgBouncer)
   jpa:
     hibernate:
       ddl-auto: validate
