@@ -5,6 +5,9 @@ import jakarta.persistence.*;
 
 import java.time.LocalDate;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
 /**
  * Tabla clinica.personal. Incluye tanto odontólogos como administrativos
  * (diferenciados por "cargo"). El módulo de citas solo usa los que tienen
