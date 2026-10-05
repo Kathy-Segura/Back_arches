@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 public interface PacienteRepository extends JpaRepository<Paciente, Integer> {
@@ -51,4 +52,16 @@ public interface PacienteRepository extends JpaRepository<Paciente, Integer> {
 
     // --------------------------------------------------------------------------------------------------//
 
+    long countByEstadoExpediente(String estado);
+
+    @Query("SELECT COUNT(p) FROM Paciente p WHERE p.fechaRegistro >= :desde AND p.fechaRegistro < :hasta")
+    long contarRegistradosEntre(@Param("desde") LocalDateTime desde, @Param("hasta") LocalDateTime hasta);
+
+    @Query("""
+        SELECT year(p.fechaRegistro) AS anio, month(p.fechaRegistro) AS mes, COUNT(p) AS total
+        FROM Paciente p
+        WHERE p.fechaRegistro >= :desde AND p.fechaRegistro < :hasta
+        GROUP BY year(p.fechaRegistro), month(p.fechaRegistro)
+        """)
+    List<MesTotalRow> nuevosPorMes(@Param("desde") LocalDateTime desde, @Param("hasta") LocalDateTime hasta);
 }

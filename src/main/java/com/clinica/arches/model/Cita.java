@@ -43,4 +43,5 @@ public class Cita {
 
     @Column(name = "fecha_creacion")
     private LocalDateTime fechaCreacion;
+
 }

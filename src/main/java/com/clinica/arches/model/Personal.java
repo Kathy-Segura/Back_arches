@@ -25,6 +25,7 @@ public class Personal {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id_personal")
     private Integer idPersonal;
 
     @Column(name = "id_usuario")

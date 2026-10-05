@@ -18,6 +18,7 @@ public class CatalogoProcedimiento {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id_procedimiento")
     private Integer idProcedimiento;
 
     @Column(name = "nombre_procedimiento", nullable = false)
@@ -37,4 +38,3 @@ public class CatalogoProcedimiento {
     @Column(nullable = false)
     private String estado; // 'activo' | 'inactivo'
 }
-

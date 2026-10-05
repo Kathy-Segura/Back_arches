@@ -9,6 +9,8 @@ import org.springframework.data.repository.query.Param;
 
 public interface TratamientoRepository extends JpaRepository<Tratamiento, Integer> {
 
+    long countByEstadoAvance(String estadoAvance);
+    long countByEstadoAvanceAndEstadoPagoNot(String estadoAvance, String estadoPago);
     /**
      * Filtros opcionales: idPaciente, idPersonal, estadoAvance, estadoPago.
      * No filtra por nombre de paciente porque el back no tiene el esquema
@@ -28,4 +30,5 @@ public interface TratamientoRepository extends JpaRepository<Tratamiento, Intege
             @Param("estadoPago") String estadoPago,
             Pageable pageable
     );
+
 }
