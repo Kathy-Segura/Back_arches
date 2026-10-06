@@ -38,6 +38,8 @@ public class CitaController {
     public ResponseEntity<Page<CitaDTO>> listar(
             @Parameter(description = "Texto a buscar en el nombre del paciente")
             @RequestParam(required = false) String search,
+            @Parameter(description = "Filtra por id del paciente (historial en la ficha del paciente)")
+            @RequestParam(required = false) Integer idPaciente,
             @Parameter(description = "Filtra por id del odontólogo (personal)")
             @RequestParam(required = false) Integer idPersonal,
             @Parameter(description = "Filtra por estado: programada | confirmada | atendida | cancelada")
@@ -50,7 +52,8 @@ public class CitaController {
             @RequestParam(defaultValue = "10") int size) {
         LocalDateTime desdeDT = desde != null ? desde.atStartOfDay() : null;
         LocalDateTime hastaDT = hasta != null ? hasta.atTime(23, 59, 59) : null;
-        return ResponseEntity.ok(citaService.listarConFiltros(search, idPersonal, estado, desdeDT, hastaDT, page, size));
+        return ResponseEntity.ok(citaService.listarConFiltros(
+                search, idPaciente, idPersonal, estado, desdeDT, hastaDT, page, size));
     }
 
     @GetMapping("/calendario")

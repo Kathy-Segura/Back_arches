@@ -44,13 +44,13 @@ public class CitaService {
     }
 
     /** Sustenta la pestaña "Listado" (búsqueda, filtros de odontólogo/estado/fecha, paginación). */
-    public Page<CitaDTO> listarConFiltros(String search, Integer idPersonal, String estado,
+    public Page<CitaDTO> listarConFiltros(String search, Integer idPaciente, Integer idPersonal, String estado,
                                           LocalDateTime desde, LocalDateTime hasta, int page, int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "fechaHora"));
         String searchNormalizado = (search == null || search.isBlank()) ? null : search.trim();
         String estadoNormalizado = (estado == null || estado.isBlank()) ? null : estado.trim();
         return citaRepository.findAll(
-                        CitaSpecification.conFiltros(searchNormalizado, idPersonal, estadoNormalizado, desde, hasta),
+                        CitaSpecification.conFiltros(searchNormalizado, idPaciente, idPersonal, estadoNormalizado, desde, hasta),
                         pageable)
                 .map(this::convertir);
     }

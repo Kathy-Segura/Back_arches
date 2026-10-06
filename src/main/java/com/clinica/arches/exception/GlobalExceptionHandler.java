@@ -11,7 +11,7 @@ import java.time.LocalDateTime;
 /**
  * No existía en el proyecto todavía, así que se agrega aquí para que el
  * módulo de citas devuelva errores en JSON (404/400/409) en vez del
- * whitelabel error page por defecto de Spring. Al ser global, también
+ * whitelabel error page por defecto de Spring. Al ser global,  también
  * mejora automáticamente los errores de PacienteController si en el
  * futuro cambian sus RuntimeException por RecursoNoEncontradoException.
  */

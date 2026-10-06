@@ -11,20 +11,26 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Sustenta el filtrado dinámico de la pestaña "Listado" (y sus exportaciones).
- * A diferencia de las queries JPQL con parámetros opcionales
- * ("(:param IS NULL OR columna = :param)"), aquí cada condición solo se
- * agrega al WHERE si el filtro realmente viene informado. Ningún parámetro
- * null llega a la SQL final, así que no se dispara ninguno de los dos bugs
- * de inferencia de tipo de PostgreSQL/pgjdbc (bytea en CAST, o "could not
- * determine data type") que sí aparecen con el patrón JPQL estático.
+ * Filtrado dinámico de citas (listado, exportaciones e historial por paciente).
+ * Cada condición solo se agrega al WHERE si el filtro viene informado.
  */
 public class CitaSpecification {
 
     private CitaSpecification() {
     }
 
+    /** Firma anterior: se conserva para no romper llamadas existentes. */
     public static Specification<Cita> conFiltros(String search,
+                                                 Integer idPersonal,
+                                                 String estado,
+                                                 LocalDateTime desde,
+                                                 LocalDateTime hasta) {
+        return conFiltros(search, null, idPersonal, estado, desde, hasta);
+    }
+
+    /** Nueva firma: agrega filtro exacto por id de paciente. */
+    public static Specification<Cita> conFiltros(String search,
+                                                 Integer idPaciente,
                                                  Integer idPersonal,
                                                  String estado,
                                                  LocalDateTime desde,
@@ -37,6 +43,10 @@ public class CitaSpecification {
                 predicados.add(cb.like(
                         cb.lower(paciente.get("nombreCompleto")),
                         "%" + search.trim().toLowerCase() + "%"));
+            }
+
+            if (idPaciente != null) {
+                predicados.add(cb.equal(root.get("paciente").get("idPaciente"), idPaciente));
             }
 
             if (idPersonal != null) {
