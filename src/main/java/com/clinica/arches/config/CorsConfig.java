@@ -13,7 +13,8 @@ public class CorsConfig {
             @Override
             public void addCorsMappings(CorsRegistry registry) {
                 registry.addMapping("/api/**")
-                        .allowedOrigins("https://sistema-clinica-arches.vercel.app")
+                        .allowedOrigins("http://localhost:8080")
+                      //.allowedOrigins("https://sistema-clinica-arches.vercel.app")
                         .allowedMethods("GET", "POST", "PUT", "DELETE", "PATCH")
                         .allowedHeaders("*");
             }

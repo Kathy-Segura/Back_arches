@@ -15,8 +15,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.data.jpa.domain.Specification;
 
-        import java.time.LocalDate;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -38,10 +39,10 @@ public class CitaController {
     public ResponseEntity<Page<CitaDTO>> listar(
             @Parameter(description = "Texto a buscar en el nombre del paciente")
             @RequestParam(required = false) String search,
-            @Parameter(description = "Filtra por id del paciente (historial en la ficha del paciente)")
-            @RequestParam(required = false) Integer idPaciente,
             @Parameter(description = "Filtra por id del odontólogo (personal)")
             @RequestParam(required = false) Integer idPersonal,
+            @Parameter(description = "Filtra por id del paciente")
+            @RequestParam(required = false) Integer idPaciente,
             @Parameter(description = "Filtra por estado: programada | confirmada | atendida | cancelada")
             @RequestParam(required = false) String estado,
             @Parameter(description = "Fecha inicial del rango (yyyy-MM-dd)")
@@ -53,7 +54,8 @@ public class CitaController {
         LocalDateTime desdeDT = desde != null ? desde.atStartOfDay() : null;
         LocalDateTime hastaDT = hasta != null ? hasta.atTime(23, 59, 59) : null;
         return ResponseEntity.ok(citaService.listarConFiltros(
-                search, idPaciente, idPersonal, estado, desdeDT, hastaDT, page, size));
+                search, idPersonal, idPaciente, estado, desdeDT, hastaDT, page, size));
+
     }
 
     @GetMapping("/calendario")
