@@ -28,7 +28,7 @@ public class SecurityConfig {
 
     /**
      * true  -> toda la API exige token (excepto /api/auth/* públicos). Valor para producción.
-     * false -> solo para desarrollo, mientras el front aún no envía el header Authorization.
+     * false -> solo para desarrollo, mientras el frob                                                                                                                      nt aún no envía el header Authorization.
      */
     @Value("${app.security.protect-api:true}")
     private boolean protegerApi;

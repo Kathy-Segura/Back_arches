@@ -11,15 +11,25 @@ import java.util.Optional;
 
 public interface UsuarioRepository extends JpaRepository<Usuario, Integer> {
 
-    Optional<Usuario> findByCorreoIgnoreCase(String correo);
+        Optional<Usuario> findByCorreoIgnoreCase(String correo);
 
-    boolean existsByCorreoIgnoreCase(String correo);
+        boolean existsByCorreoIgnoreCase(String correo);
 
-    @Query("select u from Usuario u join fetch u.rol where u.idUsuario = :id")
-    Optional<Usuario> findConRolById(@Param("id") Integer id);
+        boolean existsByCorreoIgnoreCaseAndIdUsuarioNot(String correo, Integer idUsuario);
 
-    /** Solo id y nombre de cuentas activas: es lo único que se expone públicamente para el combo del login. */
-    @Query("select new com.clinica.arches.dto.UsuarioLoginItemDTO(u.idUsuario, u.nombreCompleto) "
-            + "from Usuario u where u.estado = 'activo' order by u.nombreCompleto")
-    List<UsuarioLoginItemDTO> findActivosParaLogin();
+        @Query("select u from Usuario u join fetch u.rol where u.idUsuario = :id")
+        Optional<Usuario> findConRolById(@Param("id") Integer id);
+
+        @Query("select u from Usuario u join fetch u.rol order by u.nombreCompleto")
+        List<Usuario> findAllConRol();
+
+        /** Administradores activos distintos del usuario indicado (para no dejar el sistema sin administrador). */
+        @Query("select count(u) from Usuario u where u.estado = 'activo' "
+                + "and upper(u.rol.nombreRol) = upper(:rol) and u.idUsuario <> :excluir")
+        long contarActivosConRolExcepto(@Param("rol") String nombreRol, @Param("excluir") Integer excluir);
+
+        /** Solo id y nombre de cuentas activas: es lo único que se expone públicamente para el combo del login. */
+        @Query("select new com.clinica.arches.dto.UsuarioLoginItemDTO(u.idUsuario, u.nombreCompleto) "
+                + "from Usuario u where u.estado = 'activo' order by u.nombreCompleto")
+        List<UsuarioLoginItemDTO> findActivosParaLogin();
 }
