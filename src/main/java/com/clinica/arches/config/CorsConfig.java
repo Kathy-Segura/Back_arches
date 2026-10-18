@@ -13,7 +13,7 @@ public class CorsConfig {
  * app.cors.allowed-origins, (por ejemplo, desde la variable de entorno CORS_ORIGINS en producción).
  */
     @Value("${app.cors.allowed-origins:"
-            + "http://localhost:8080,"
+            + "http://localhost:8082,"
             + "https://sistema-clinica-arches.vercel.app}")
     private String[] allowedOrigins;
 

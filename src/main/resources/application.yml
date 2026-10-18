@@ -15,6 +15,13 @@ spring:
       hibernate:
         format_sql: true
         default_schema: clinica
+  mail:
+    port: ${MAIL_PORT:587}
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.starttls.enable: true
+    # host, username y password: solo por variables de entorno
+    # SPRING_MAIL_HOST, SPRING_MAIL_USERNAME, SPRING_MAIL_PASSWORD
 
 server:
   port: 8081
@@ -22,3 +29,17 @@ server:
 springdoc:
   swagger-ui:
     path: /docs
+
+app:
+  cors:
+    allowed-origins: ${CORS_ORIGINS:http://localhost:8080,http://localhost:8082,https://sistema-clinica-arches.vercel.app}
+  jwt:
+    secret: ${JWT_SECRET}
+    expiration-minutes: 480
+    remember-expiration-minutes: 10080
+  frontend-url: ${FRONTEND_URL:http://localhost:8082}
+  security:
+    protect-api: ${PROTECT_API:true}
+  mail:
+    from: ${MAIL_FROM:no-reply@arches.local}
+    log-links: ${MAIL_LOG_LINKS:false}
