@@ -55,10 +55,20 @@ public class AuthController {
 
     /** Sesión actual (requiere token). */
     @GetMapping("/me")
-    public UsuarioSesionDTO me(@AuthenticationPrincipal Integer idUsuario) {
+    public SesionActivaDTO me(@AuthenticationPrincipal Integer idUsuario) {
         if (idUsuario == null) {
             throw new ApiException(HttpStatus.UNAUTHORIZED, "Debe iniciar sesión");
         }
         return service.sesion(idUsuario);
+    }
+
+    /** El propio usuario cambia su contraseña (requiere token). */
+    @PostMapping("/cambiar-contrasena")
+    public MensajeDTO cambiarContrasena(@AuthenticationPrincipal Integer idUsuario,
+                                        @Valid @RequestBody CambiarContrasenaRequestDTO req) {
+        if (idUsuario == null) {
+            throw new ApiException(HttpStatus.UNAUTHORIZED, "Debe iniciar sesión");
+        }
+        return service.cambiarContrasena(idUsuario, req);
     }
 }

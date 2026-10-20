@@ -5,9 +5,9 @@ import jakarta.persistence.EmbeddedId;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
 
-/** Tabla clinica.rol_permiso */
+/** Tabla clinica.rol_permiso: qué puede hacer un rol en cada módulo. */
 @Entity
-@Table(name = "rol_permiso", schema = "clinica")
+@Table(name = "rol_permiso")
 public class RolPermiso {
 
     @EmbeddedId
@@ -29,20 +29,17 @@ public class RolPermiso {
         // requerido por JPA
     }
 
-    public RolPermiso(RolPermisoId id) {
-        this.id = id;
-    }
-
-    public void asignar(boolean ver, boolean crear, boolean editar, boolean eliminar) {
-        this.puedeVer = ver;
-        this.puedeCrear = crear;
-        this.puedeEditar = editar;
-        this.puedeEliminar = eliminar;
+    public RolPermiso(Integer idRol, Integer idModulo) {
+        this.id = new RolPermisoId(idRol, idModulo);
     }
 
     public RolPermisoId getId() { return id; }
     public boolean isPuedeVer() { return puedeVer; }
+    public void setPuedeVer(boolean v) { this.puedeVer = v; }
     public boolean isPuedeCrear() { return puedeCrear; }
+    public void setPuedeCrear(boolean v) { this.puedeCrear = v; }
     public boolean isPuedeEditar() { return puedeEditar; }
+    public void setPuedeEditar(boolean v) { this.puedeEditar = v; }
     public boolean isPuedeEliminar() { return puedeEliminar; }
+    public void setPuedeEliminar(boolean v) { this.puedeEliminar = v; }
 }

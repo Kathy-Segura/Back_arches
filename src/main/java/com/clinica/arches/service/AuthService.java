@@ -33,10 +33,11 @@ public class AuthService {
     private final JwtService jwt;
     private final LoginAttemptService intentos;
     private final MailService mail;
+    private final PermisoService permisos;
     private final String frontendUrl;
 
     public AuthService(UsuarioRepository usuarios, RolRepository roles, PasswordEncoder encoder, JwtService jwt,
-                       LoginAttemptService intentos, MailService mail,
+                       LoginAttemptService intentos, MailService mail, PermisoService permisos,
                        @Value("${app.frontend-url:http://localhost:8080}") String frontendUrl) {
         this.usuarios = usuarios;
         this.roles = roles;
@@ -44,6 +45,7 @@ public class AuthService {
         this.jwt = jwt;
         this.intentos = intentos;
         this.mail = mail;
+        this.permisos = permisos;
         this.frontendUrl = frontendUrl.replaceAll("/+$", "");
     }
 
@@ -86,14 +88,48 @@ public class AuthService {
         intentos.limpiar(req.idUsuario());
         u.setUltimoAcceso(LocalDateTime.now());
         JwtService.Emitido e = jwt.crearSesion(u, req.recordarme());
-        return new LoginResponseDTO(e.token(), e.expiraEn(), UsuarioSesionDTO.from(u));
+        return new LoginResponseDTO(e.token(), e.expiraEn(), UsuarioSesionDTO.from(u),
+                permisos.paraSesion(u.getRol()), u.isDebeCambiarContrasena());
     }
 
-    @Transactional(readOnly = true)
-    public UsuarioSesionDTO sesion(Integer idUsuario) {
-        return usuarios.findConRolById(idUsuario)
-                .map(UsuarioSesionDTO::from)
+   /* @Transactional(readOnly = true)
+    public SesionDTO sesion(Integer idUsuario) {
+        Usuario u = usuarios.findConRolById(idUsuario)
                 .orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, "Debe iniciar sesión"));
+        return new SesionDTO(UsuarioSesionDTO.from(u), permisos.paraSesion(u.getRol()), u.isDebeCambiarContrasena());
+    }*/
+
+    @Transactional(readOnly = true)
+    public SesionActivaDTO sesion(Integer idUsuario) {
+        Usuario u = usuarios.findConRolById(idUsuario)
+                .orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, "Debe iniciar sesión"));
+        return new SesionActivaDTO(UsuarioSesionDTO.from(u),
+                permisos.paraSesion(u.getRol()),
+                u.isDebeCambiarContrasena());
+    }
+
+
+    /** Cambio de contraseña del propio usuario (también cierra el ciclo de la contraseña temporal). */
+    @Transactional
+    public MensajeDTO cambiarContrasena(Integer idUsuario, CambiarContrasenaRequestDTO req) {
+        intentos.verificar(idUsuario);
+        Usuario u = usuarios.findConRolById(idUsuario)
+                .orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, "Debe iniciar sesión"));
+        if (!encoder.matches(req.contrasenaActual(), u.getContrasenaHash())) {
+            intentos.registrarFallo(idUsuario);
+            throw new ApiException(HttpStatus.BAD_REQUEST, "La contraseña actual no es correcta");
+        }
+        String error = PasswordPolicy.validar(req.contrasenaNueva());
+        if (error != null) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, error);
+        }
+        if (req.contrasenaNueva().equals(req.contrasenaActual())) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "La nueva contraseña debe ser distinta de la actual");
+        }
+        u.setContrasenaHash(encoder.encode(req.contrasenaNueva()));
+        u.setDebeCambiarContrasena(false);
+        intentos.limpiar(idUsuario);
+        return new MensajeDTO("Contraseña actualizada correctamente");
     }
 
     /* ---------------- registro público ---------------- */
@@ -166,6 +202,7 @@ public class AuthService {
             throw new ApiException(HttpStatus.BAD_REQUEST, ENLACE_INVALIDO);
         }
         u.setContrasenaHash(encoder.encode(req.contrasenaNueva()));
+        u.setDebeCambiarContrasena(false);
         intentos.limpiar(u.getIdUsuario());
         return new MensajeDTO("Contraseña actualizada. Ya puede iniciar sesión");
     }

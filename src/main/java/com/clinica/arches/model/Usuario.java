@@ -35,6 +35,10 @@ public class Usuario {
     @Column(name = "ultimo_acceso")
     private LocalDateTime ultimoAcceso;
 
+    /** true mientras la contraseña sea temporal (creada o restablecida por un administrador). */
+    @Column(name = "debe_cambiar_contrasena", nullable = false)
+    private boolean debeCambiarContrasena = false;
+
     /** La asigna la BD (DEFAULT now()). */
     @Column(name = "fecha_creacion", insertable = false, updatable = false)
     private LocalDateTime fechaCreacion;
@@ -54,5 +58,7 @@ public class Usuario {
     public void setEstado(String estado) { this.estado = estado; }
     public LocalDateTime getUltimoAcceso() { return ultimoAcceso; }
     public void setUltimoAcceso(LocalDateTime ultimoAcceso) { this.ultimoAcceso = ultimoAcceso; }
+    public boolean isDebeCambiarContrasena() { return debeCambiarContrasena; }
+    public void setDebeCambiarContrasena(boolean debeCambiarContrasena) { this.debeCambiarContrasena = debeCambiarContrasena; }
     public LocalDateTime getFechaCreacion() { return fechaCreacion; }
 }

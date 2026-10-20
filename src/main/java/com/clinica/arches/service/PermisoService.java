@@ -1,109 +1,158 @@
 package com.clinica.arches.service;
 
-import com.clinica.arches.dto.ModuloResponse;
-import com.clinica.arches.dto.PermisoModuloResponse;
-import com.clinica.arches.dto.PermisoRequest;
-import com.clinica.arches.dto.PermisosRequest;
-import com.clinica.arches.model.Modulo;
-import com.clinica.arches.model.RolPermiso;
-import com.clinica.arches.model.RolPermisoId;
+import com.clinica.arches.dto.*;
 import com.clinica.arches.exception.ApiException;
-import com.clinica.arches.repository.ModuloRepository;
+import com.clinica.arches.model.ModuloSistema;
+import com.clinica.arches.model.Rol;
+import com.clinica.arches.model.RolPermiso;
+import com.clinica.arches.repository.ModuloSistemaRepository;
 import com.clinica.arches.repository.RolPermisoRepository;
 import com.clinica.arches.repository.RolRepository;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * Permisos por rol y módulo.
+ * - El rol administrador (app.security.admin-role) tiene acceso total y no se edita: evita bloquearse a sí mismo.
+ * - "Usuarios" y "Roles y Permisos" son exclusivos del administrador (nunca se conceden a otros roles).
+ * - Sin permiso de ver no puede haber crear, editar ni eliminar.
+ */
 @Service
 public class PermisoService {
 
-    private final RolRepository roles;
-    private final ModuloRepository modulos;
-    private final RolPermisoRepository permisos;
+    public enum Accion { VER, CREAR, EDITAR, ELIMINAR }
 
-    public PermisoService(RolRepository roles, ModuloRepository modulos, RolPermisoRepository permisos) {
-        this.roles = roles;
+    public static final Set<String> MODULOS_EXCLUSIVOS_ADMIN = Set.of("Usuarios", "Roles y Permisos");
+
+    private final ModuloSistemaRepository modulos;
+    private final RolPermisoRepository permisos;
+    private final RolRepository roles;
+    private final String rolAdmin;
+
+    public PermisoService(ModuloSistemaRepository modulos, RolPermisoRepository permisos, RolRepository roles,
+                          @Value("${app.security.admin-role:Administrador}") String rolAdmin) {
         this.modulos = modulos;
         this.permisos = permisos;
+        this.roles = roles;
+        this.rolAdmin = rolAdmin;
+    }
+
+    public boolean esAdmin(Rol rol) {
+        return rol.getNombreRol().equalsIgnoreCase(rolAdmin);
     }
 
     @Transactional(readOnly = true)
-    public List<ModuloResponse> listarModulos() {
-        return modulos.findAllByOrderByIdModuloAsc().stream().map(ModuloResponse::from).toList();
+    public List<ModuloDTO> listarModulos() {
+        return modulos.findAllByOrderByIdModuloAsc().stream()
+                .map(m -> new ModuloDTO(m.getIdModulo(), m.getNombreModulo())).toList();
     }
 
+    /** Matriz completa (todos los módulos; en false lo que aún no se asignó). */
     @Transactional(readOnly = true)
-    public List<PermisoModuloResponse> obtenerPorRol(Integer idRol) {
-        asegurarRol(idRol);
-        return construirMatriz(idRol);
+    public List<PermisoModuloDTO> matriz(Integer idRol) {
+        Rol rol = buscarRol(idRol);
+        return construirMatriz(rol);
     }
 
-    /**
-     * Reemplaza los permisos del rol para los módulos recibidos. Todo ocurre en
-     * una transacción: si algo falla no se guarda nada.
-     */
     @Transactional
-    public List<PermisoModuloResponse> guardarPorRol(Integer idRol, PermisosRequest request) {
-        asegurarRol(idRol);
+    public List<PermisoModuloDTO> guardar(Integer idRol, GuardarPermisosRequestDTO req) {
+        Rol rol = buscarRol(idRol);
+        if (esAdmin(rol)) {
+            throw new ApiException(HttpStatus.CONFLICT,
+                    "El rol administrador tiene acceso total y sus permisos no se pueden modificar");
+        }
+        Map<Integer, ModuloSistema> catalogo = new HashMap<>();
+        modulos.findAll().forEach(m -> catalogo.put(m.getIdModulo(), m));
 
-        Set<Integer> modulosValidos = modulos.findAll().stream()
-                .map(Modulo::getIdModulo)
-                .collect(Collectors.toSet());
-
-        // Si el mismo módulo viene repetido, prevalece el último.
-        Map<Integer, PermisoRequest> recibidos = new LinkedHashMap<>();
-        for (PermisoRequest p : request.permisos()) {
-            if (!modulosValidos.contains(p.idModulo())) {
-                throw ApiException.badRequest("El módulo " + p.idModulo() + " no existe");
-            }
-            recibidos.put(p.idModulo(), p);
+        Map<Integer, PermisoInputDTO> porModulo = new LinkedHashMap<>();
+        for (PermisoInputDTO p : req.permisos()) {
+            porModulo.put(p.idModulo(), p); // si se repite un módulo, gana el último
         }
 
-        Map<Integer, RolPermiso> existentes = permisos.findByIdIdRol(idRol).stream()
-                .collect(Collectors.toMap(rp -> rp.getId().getIdModulo(), rp -> rp));
+        for (PermisoInputDTO p : porModulo.values()) {
+            ModuloSistema m = catalogo.get(p.idModulo());
+            if (m == null) {
+                throw new ApiException(HttpStatus.BAD_REQUEST, "Módulo no válido: " + p.idModulo());
+            }
+            boolean algunaAccion = p.puedeVer() || p.puedeCrear() || p.puedeEditar() || p.puedeEliminar();
+            if (MODULOS_EXCLUSIVOS_ADMIN.contains(m.getNombreModulo()) && algunaAccion) {
+                throw new ApiException(HttpStatus.BAD_REQUEST,
+                        "El módulo " + m.getNombreModulo() + " es exclusivo del administrador");
+            }
+            if (!p.puedeVer() && (p.puedeCrear() || p.puedeEditar() || p.puedeEliminar())) {
+                throw new ApiException(HttpStatus.BAD_REQUEST,
+                        "No se puede crear, editar ni eliminar sin permiso de ver en " + m.getNombreModulo());
+            }
+        }
 
-        List<RolPermiso> aGuardar = recibidos.values().stream().map(p -> {
-            RolPermiso entidad = existentes.getOrDefault(
-                    p.idModulo(), new RolPermiso(new RolPermisoId(idRol, p.idModulo())));
-
-            boolean crear = p.puedeCrear();
-            boolean editar = p.puedeEditar();
-            boolean eliminar = p.puedeEliminar();
-            // Coherencia: cualquier acción de escritura implica "ver".
-            boolean ver = p.puedeVer() || crear || editar || eliminar;
-
-            entidad.asignar(ver, crear, editar, eliminar);
-            return entidad;
-        }).toList();
-
-        permisos.saveAll(aGuardar);
-        return construirMatriz(idRol);
+        Map<Integer, RolPermiso> existentes = new HashMap<>();
+        permisos.findByIdIdRol(idRol).forEach(rp -> existentes.put(rp.getId().getIdModulo(), rp));
+        for (PermisoInputDTO p : porModulo.values()) {
+            RolPermiso rp = existentes.getOrDefault(p.idModulo(), new RolPermiso(idRol, p.idModulo()));
+            rp.setPuedeVer(p.puedeVer());
+            rp.setPuedeCrear(p.puedeCrear());
+            rp.setPuedeEditar(p.puedeEditar());
+            rp.setPuedeEliminar(p.puedeEliminar());
+            permisos.save(rp);
+        }
+        permisos.flush();
+        return construirMatriz(rol);
     }
 
-    /** Todos los módulos del sistema con los permisos del rol (false si no hay fila). */
-    private List<PermisoModuloResponse> construirMatriz(Integer idRol) {
-        Map<Integer, RolPermiso> porModulo = new HashMap<>();
-        permisos.findByIdIdRol(idRol).forEach(rp -> porModulo.put(rp.getId().getIdModulo(), rp));
+    /** Permisos que recibe el front al iniciar sesión: solo los módulos en los que el rol puede hacer algo. */
+    @Transactional(readOnly = true)
+    public List<PermisoModuloDTO> paraSesion(Rol rol) {
+        return construirMatriz(rol).stream()
+                .filter(p -> esAdmin(rol)
+                        || (!MODULOS_EXCLUSIVOS_ADMIN.contains(p.nombreModulo())
+                        && (p.puedeVer() || p.puedeCrear() || p.puedeEditar() || p.puedeEliminar())))
+                .toList();
+    }
 
+    /** Usado por la regla central de acceso del back (una consulta por petición). */
+    @Transactional(readOnly = true)
+    public boolean puede(Integer idRol, String modulo, Accion accion) {
+        if (MODULOS_EXCLUSIVOS_ADMIN.contains(modulo)) {
+            return false; // el administrador nunca llega aquí: se resuelve antes
+        }
+        return permisos.findByRolYModulo(idRol, modulo).map(p -> switch (accion) {
+            case VER -> p.isPuedeVer();
+            case CREAR -> p.isPuedeVer() && p.isPuedeCrear();
+            case EDITAR -> p.isPuedeVer() && p.isPuedeEditar();
+            case ELIMINAR -> p.isPuedeVer() && p.isPuedeEliminar();
+        }).orElse(false);
+    }
+
+    /* ---------------- auxiliares ---------------- */
+
+    private Rol buscarRol(Integer idRol) {
+        return roles.findById(idRol)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Rol no encontrado"));
+    }
+
+    private List<PermisoModuloDTO> construirMatriz(Rol rol) {
+        boolean admin = esAdmin(rol);
+        Map<Integer, RolPermiso> porModulo = new HashMap<>();
+        if (!admin) {
+            permisos.findByIdIdRol(rol.getIdRol()).forEach(rp -> porModulo.put(rp.getId().getIdModulo(), rp));
+        }
         return modulos.findAllByOrderByIdModuloAsc().stream().map(m -> {
+            if (admin) {
+                return new PermisoModuloDTO(m.getIdModulo(), m.getNombreModulo(), true, true, true, true);
+            }
             RolPermiso rp = porModulo.get(m.getIdModulo());
             return rp == null
-                    ? new PermisoModuloResponse(m.getIdModulo(), m.getNombreModulo(), false, false, false, false)
-                    : new PermisoModuloResponse(
-                    m.getIdModulo(), m.getNombreModulo(),
-                    rp.isPuedeVer(), rp.isPuedeCrear(), rp.isPuedeEditar(), rp.isPuedeEliminar());
+                    ? new PermisoModuloDTO(m.getIdModulo(), m.getNombreModulo(), false, false, false, false)
+                    : new PermisoModuloDTO(m.getIdModulo(), m.getNombreModulo(), rp.isPuedeVer(), rp.isPuedeCrear(),
+                    rp.isPuedeEditar(), rp.isPuedeEliminar());
         }).toList();
-    }
-
-    private void asegurarRol(Integer idRol) {
-        if (!roles.existsById(idRol)) {
-            throw ApiException.notFound("El rol no existe");
-        }
     }
 }

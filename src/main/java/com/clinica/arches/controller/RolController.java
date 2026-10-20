@@ -1,80 +1,61 @@
 package com.clinica.arches.controller;
 
-import com.clinica.arches.dto.EstadoRequest;
-import com.clinica.arches.dto.ModuloResponse;
-import com.clinica.arches.dto.PermisoModuloResponse;
-import com.clinica.arches.dto.PermisosRequest;
-import com.clinica.arches.dto.RolRequest;
-import com.clinica.arches.dto.RolResponse;
+import com.clinica.arches.dto.*;
 import com.clinica.arches.service.PermisoService;
 import com.clinica.arches.service.RolService;
 import jakarta.validation.Valid;
-import java.util.List;
 import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseStatus;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
+/** Rutas que consume src/lib/api/roles.ts. Solo el rol administrador (ver SecurityConfig). */
 @RestController
-@RequestMapping("/api")
+@RequestMapping("/api/roles")
 public class RolController {
 
-    private final RolService rolService;
-    private final PermisoService permisoService;
+    private final RolService roles;
+    private final PermisoService permisos;
 
-    public RolController(RolService rolService, PermisoService permisoService) {
-        this.rolService = rolService;
-        this.permisoService = permisoService;
+    public RolController(RolService roles, PermisoService permisos) {
+        this.roles = roles;
+        this.permisos = permisos;
     }
 
-    // TODO (módulo Login): restringir con @PreAuthorize al permiso "Roles y Permisos"
-
-    @GetMapping("/modulos")
-    public List<ModuloResponse> listarModulos() {
-        return permisoService.listarModulos();
+    @GetMapping
+    public List<RolDTO> listar(@RequestParam(defaultValue = "false") boolean incluirInactivos) {
+        return roles.listar(incluirInactivos);
     }
 
-    @GetMapping("/roles")
-    public List<RolResponse> listar(@RequestParam(defaultValue = "false") boolean incluirInactivos) {
-        return rolService.listar(incluirInactivos);
+    @GetMapping("/{id}")
+    public RolDTO obtener(@PathVariable Integer id) {
+        return roles.obtener(id);
     }
 
-    @GetMapping("/roles/{id}")
-    public RolResponse obtener(@PathVariable Integer id) {
-        return rolService.obtener(id);
-    }
-
-    @PostMapping("/roles")
+    @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public RolResponse crear(@Valid @RequestBody RolRequest request) {
-        return rolService.crear(request);
+    public RolDTO crear(@Valid @RequestBody RolRequestDTO req) {
+        return roles.crear(req);
     }
 
-    @PutMapping("/roles/{id}")
-    public RolResponse actualizar(@PathVariable Integer id, @Valid @RequestBody RolRequest request) {
-        return rolService.actualizar(id, request);
+    @PutMapping("/{id}")
+    public RolDTO actualizar(@PathVariable Integer id, @Valid @RequestBody RolRequestDTO req) {
+        return roles.actualizar(id, req);
     }
 
-    @PatchMapping("/roles/{id}/estado")
-    public RolResponse cambiarEstado(@PathVariable Integer id, @Valid @RequestBody EstadoRequest request) {
-        return rolService.cambiarEstado(id, request.activo());
+    @PatchMapping("/{id}/estado")
+    public RolDTO cambiarEstado(@PathVariable Integer id, @Valid @RequestBody EstadoRolRequestDTO req) {
+        return roles.cambiarEstado(id, req);
     }
 
-    @GetMapping("/roles/{id}/permisos")
-    public List<PermisoModuloResponse> obtenerPermisos(@PathVariable Integer id) {
-        return permisoService.obtenerPorRol(id);
+    @GetMapping("/{id}/permisos")
+    public List<PermisoModuloDTO> obtenerPermisos(@PathVariable Integer id) {
+        return permisos.matriz(id);
     }
 
-    @PutMapping("/roles/{id}/permisos")
-    public List<PermisoModuloResponse> guardarPermisos(
-            @PathVariable Integer id, @Valid @RequestBody PermisosRequest request) {
-        return permisoService.guardarPorRol(id, request);
+    @PutMapping("/{id}/permisos")
+    public List<PermisoModuloDTO> guardarPermisos(@PathVariable Integer id,
+                                                  @Valid @RequestBody GuardarPermisosRequestDTO req) {
+        return permisos.guardar(id, req);
     }
 }

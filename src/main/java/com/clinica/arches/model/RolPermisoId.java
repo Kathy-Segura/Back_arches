@@ -2,10 +2,11 @@ package com.clinica.arches.model;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;
+
 import java.io.Serializable;
 import java.util.Objects;
 
-/** Clave compuesta (id_rol, id_modulo) de clinica.rol_permiso */
+/** Clave compuesta (id_rol, id_modulo) de clinica.rol_permiso. */
 @Embeddable
 public class RolPermisoId implements Serializable {
 
@@ -30,8 +31,8 @@ public class RolPermisoId implements Serializable {
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof RolPermisoId other)) return false;
-        return Objects.equals(idRol, other.idRol) && Objects.equals(idModulo, other.idModulo);
+        if (!(o instanceof RolPermisoId otro)) return false;
+        return Objects.equals(idRol, otro.idRol) && Objects.equals(idModulo, otro.idModulo);
     }
 
     @Override

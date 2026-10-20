@@ -28,10 +28,14 @@ public class SecurityConfig {
 
     /**
      * true  -> toda la API exige token (excepto /api/auth/* públicos). Valor para producción.
-     * false -> solo para desarrollo, mientras el frob                                                                                                                      nt aún no envía el header Authorization.
+     * false -> solo para desarrollo, mientras el front aún no envía el header Authorization.
      */
     @Value("${app.security.protect-api:true}")
     private boolean protegerApi;
+
+    /** Nombre del rol administrador en la tabla roles (sin importar mayúsculas). Solo él administra usuarios. */
+    @Value("${app.security.admin-role:Administrador}")
+    private String rolAdmin;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -47,7 +51,8 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http, JwtService jwt, UsuarioRepository usuarios) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http, JwtService jwt, UsuarioRepository usuarios,
+                                           PermisoAccessPolicy politica) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable) // API sin cookies de sesión: el token va en el header
                 .cors(Customizer.withDefaults())       // usa la configuración de CorsConfig (WebMvcConfigurer)
@@ -57,7 +62,14 @@ public class SecurityConfig {
                     a.requestMatchers("/api/auth/usuarios", "/api/auth/roles", "/api/auth/login",
                             "/api/auth/registro", "/api/auth/recuperar", "/api/auth/restablecer").permitAll();
                     a.requestMatchers("/docs/**", "/swagger-ui/**", "/v3/api-docs/**", "/error").permitAll();
+                    // Administración: solo el rol administrador.
+                    a.requestMatchers("/api/usuarios/**", "/api/roles/**", "/api/modulos/**")
+                            .hasRole(JwtAuthFilter.normalizar(rolAdmin));
+                    // /api/auth/me y /api/auth/cambiar-contrasena: cualquier usuario con sesión.
+                    a.requestMatchers("/api/auth/**").authenticated();
                     if (protegerApi) {
+                        // Resto de la API: permiso del rol en el módulo correspondiente (PermisoAccessPolicy).
+                        a.requestMatchers("/api/**").access((auth, ctx) -> politica.decidir(auth.get(), ctx.getRequest()));
                         a.anyRequest().authenticated();
                     } else {
                         a.anyRequest().permitAll();
@@ -66,7 +78,7 @@ public class SecurityConfig {
                 .exceptionHandling(e -> e
                         .authenticationEntryPoint((req, res, ex) -> escribir(res, HttpStatus.UNAUTHORIZED, "Debe iniciar sesión"))
                         .accessDeniedHandler((req, res, ex) -> escribir(res, HttpStatus.FORBIDDEN, "No tiene permiso para esta acción")))
-                .addFilterBefore(new JwtAuthFilter(jwt, usuarios), UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(new JwtAuthFilter(jwt, usuarios, rolAdmin), UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
 

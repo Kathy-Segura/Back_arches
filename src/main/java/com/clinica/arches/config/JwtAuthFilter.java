@@ -12,7 +12,6 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
@@ -21,18 +20,20 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * Valida el Bearer token y consulta la BD en cada petición, así desactivar un usuario o cambiarle
- * el rol surte efecto de inmediato. NO es un @Component a propósito (se instancia en SecurityConfig)
- * para que Spring Boot no lo registre dos veces.
+ * Valida el Bearer token y consulta la BD en cada petición, así desactivar un usuario, cambiarle el rol
+ * o marcar su contraseña como temporal surte efecto de inmediato. NO es un @Component a propósito
+ * (se instancia en SecurityConfig) para que Spring Boot no lo registre dos veces.
  */
 public class JwtAuthFilter extends OncePerRequestFilter {
 
     private final JwtService jwt;
     private final UsuarioRepository usuarios;
+    private final String rolAdmin;
 
-    public JwtAuthFilter(JwtService jwt, UsuarioRepository usuarios) {
+    public JwtAuthFilter(JwtService jwt, UsuarioRepository usuarios, String rolAdmin) {
         this.jwt = jwt;
         this.usuarios = usuarios;
+        this.rolAdmin = rolAdmin;
     }
 
     @Override
@@ -49,7 +50,10 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                             var auth = new UsernamePasswordAuthenticationToken(
                                     u.getIdUsuario(), null,
                                     List.of(new SimpleGrantedAuthority("ROLE_" + normalizar(u.getRol().getNombreRol()))));
-                            auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(req));
+                            auth.setDetails(new SesionInfo(
+                                    u.getRol().getIdRol(),
+                                    u.getRol().getNombreRol().equalsIgnoreCase(rolAdmin),
+                                    u.isDebeCambiarContrasena()));
                             SecurityContextHolder.getContext().setAuthentication(auth);
                         });
             } catch (JwtException | IllegalArgumentException ignorado) {

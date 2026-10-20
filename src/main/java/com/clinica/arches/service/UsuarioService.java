@@ -72,6 +72,7 @@ public class UsuarioService {
         u.setRol(rol);
         u.setContrasenaHash(encoder.encode(req.contrasenaTemporal()));
         u.setEstado(Boolean.FALSE.equals(req.activo()) ? "inactivo" : "activo");
+        u.setDebeCambiarContrasena(true); // la contraseña la define el administrador: debe cambiarla al ingresar
         guardar(u);
         em.refresh(u); // fecha_creacion la asigna la BD
         return UsuarioDTO.from(u);
@@ -120,9 +121,7 @@ public class UsuarioService {
         return UsuarioDTO.from(u);
     }
 
-    /**
-     * Aprueba una cuenta creada por el registro público.
-     */
+    /** Aprueba una cuenta creada por el registro público. */
     @Transactional
     public UsuarioDTO aprobar(Integer id) {
         Usuario u = buscar(id);
@@ -143,6 +142,7 @@ public class UsuarioService {
         Usuario u = buscar(id);
         validarContrasena(req.contrasenaTemporal());
         u.setContrasenaHash(encoder.encode(req.contrasenaTemporal()));
+        u.setDebeCambiarContrasena(true);
         intentos.limpiar(id); // levanta un posible bloqueo por intentos fallidos
         guardar(u);
         return new MensajeDTO("Contraseña restablecida correctamente");
